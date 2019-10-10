@@ -55,8 +55,14 @@ public class Application {
             }
         }
 
-        System.out.println(roomConflicts.size());
-        System.out.println(curricularConflicts.size());
+        System.out.println("room conflicts:");
+        for(Conflict conflict: roomConflicts) {
+            System.out.println(conflict.getFirstLecture().getId() + " - " + conflict.getSecondLecture().getId());
+        }
+        System.out.println("curricular conflicts");
+        for(Conflict conflict: curricularConflicts) {
+            System.out.println(conflict.getFirstLecture().getId() + " - " + conflict.getSecondLecture().getId());
+        }
 
 
     }
