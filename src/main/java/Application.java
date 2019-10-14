@@ -1,119 +1,42 @@
+import dao.FileAccess;
 import model.*;
+import service.LectureService;
 
-import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class Application {
 
     private static final String TIMETABLE_XML = "src/main/resources/timetable.xml";
 
-    public static void main(String[] args) throws JAXBException, FileNotFoundException {
+    public static void main(String[] args) {
+        University university = new University();
 
-        // CREATE CONTEXT
-        JAXBContext context = JAXBContext.newInstance(University.class);
-        Marshaller m = context.createMarshaller();
-        m.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
+        try {
+            university = FileAccess.mapDataFromFile(TIMETABLE_XML);
+        } catch (JAXBException e) {
+            System.out.println("access file error");
+        }
+        LectureService lectureService = new LectureService();
 
-        System.out.println("Output from our XML File: ");
-        Unmarshaller um = context.createUnmarshaller();
-        File file = new File(TIMETABLE_XML);
-        University university = (University) um.unmarshal(file);
+
         List<Lecture> lectureList = university.getLectures();
+        Map<String, List<Conflict>> conflicts = lectureService.getConflicts(university, lectureList);
         List<Conflict> roomConflicts = new ArrayList<>();
         List<Conflict> curricularConflicts = new ArrayList<>();
-
-
-
-
-
-
-
-
-        for(int i=0; i<lectureList.size()-1; ++i) {
-            Lecture currentLecture = lectureList.get(i);
-            List<Lecture> lecturesToCompareWith = lectureList.subList(i+1, lectureList.size()-1);
-            for(Lecture lectureToCheckWith : lecturesToCompareWith) {
-                if (hasRoomConflict(currentLecture, lectureToCheckWith)) {
-                    Conflict conflict = new Conflict();
-                    conflict.setFirstLecture(currentLecture);
-                    conflict.setSecondLecture(lectureToCheckWith);
-                    roomConflicts.add(conflict);
-                }
-
-                if (hasCurricularConflict(university.getCurriculumList(), currentLecture, lectureToCheckWith)) {
-                    Conflict conflict = new Conflict();
-                    conflict.setFirstLecture(currentLecture);
-                    conflict.setSecondLecture(lectureToCheckWith);
-                    curricularConflicts.add(conflict);
-                }
-            }
+        if (conflicts.containsKey(LectureService.ROOM_CONFLICTS_KEY)) {
+            roomConflicts = conflicts.get(LectureService.ROOM_CONFLICTS_KEY);
+        }
+        if (conflicts.containsKey(LectureService.CURRICULAR_CONFLICTS_KEY)) {
+            curricularConflicts = conflicts.get(LectureService.CURRICULAR_CONFLICTS_KEY);
         }
 
         System.out.println("room conflicts:");
-        for(Conflict conflict: roomConflicts) {
-            System.out.println(conflict.getFirstLecture().getId() + " - " + conflict.getSecondLecture().getId());
-        }
+        roomConflicts.forEach(conflict -> System.out.println(conflict.getFirstLecture().getId() + " - " + conflict.getSecondLecture().getId()));
+
         System.out.println("curricular conflicts");
-        for(Conflict conflict: curricularConflicts) {
-            System.out.println(conflict.getFirstLecture().getId() + " - " + conflict.getSecondLecture().getId());
-        }
+        curricularConflicts.forEach(conflict -> System.out.println(conflict.getFirstLecture().getId() + " - " + conflict.getSecondLecture().getId()));
 
-
-    }
-
-    public static boolean hasRoomConflict(Lecture firstLecture, Lecture secondLecture) {
-        boolean hasConflict = false;
-        for(Booking firstBooking : firstLecture.getBookings()) {
-            for (Booking secondBooking: secondLecture.getBookings()) {
-                if (firstBooking.getWeekDay().equals(secondBooking.getWeekDay()) && firstBooking.getRoom().equals(secondBooking.getRoom()) && hasTimeConflict(firstBooking, secondBooking)) {
-                    hasConflict = true;
-                    break;
-                }
-            }
-            if (hasConflict) {
-                break;
-            }
-        }
-
-        return hasConflict;
-    }
-
-    public static boolean hasTimeConflict(Booking firstBooking, Booking secondBooking) {
-        if (firstBooking.getStartTime().isBefore(firstBooking.getStartTime()) && firstBooking.getEndTime().isAfter(secondBooking.getStartTime())
-            || firstBooking.getStartTime().isAfter(secondBooking.getStartTime()) && secondBooking.getEndTime().isAfter(firstBooking.getStartTime())
-        ) {
-            return true;
-        }
-
-        return false;
-    }
-
-    public static boolean hasCurricularConflict(List<Curriculum> curriculumList, Lecture firstLecture, Lecture secondLecture) {
-        if (firstLecture.getCurriculum(curriculumList).equals(secondLecture.getCurriculum(curriculumList))) {
-            boolean hasConflict = false;
-
-            for(Booking firstBooking : firstLecture.getBookings()) {
-                for (Booking secondBooking: secondLecture.getBookings()) {
-                    if (firstBooking.getWeekDay().equals(secondBooking.getWeekDay()) && hasTimeConflict(firstBooking, secondBooking)) {
-                        hasConflict = true;
-                        break;
-                    }
-                }
-                if (hasConflict) {
-                    break;
-                }
-            }
-
-            return hasConflict;
-        }
-
-        return false;
     }
 
 }
