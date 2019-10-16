@@ -17,11 +17,10 @@ public class Application {
         } catch (JAXBException e) {
             System.out.println("access file error");
         }
-        LectureService lectureService = new LectureService();
+        LectureService lectureService = LectureService.getInstance();
 
 
-        List<Lecture> lectureList = university.getLectures();
-        Map<String, List<Conflict>> conflicts = lectureService.getConflicts(university, lectureList);
+        Map<String, List<Conflict>> conflicts = lectureService.getConflicts(university);
         List<Conflict> roomConflicts = new ArrayList<>();
         List<Conflict> curricularConflicts = new ArrayList<>();
         if (conflicts.containsKey(LectureService.ROOM_CONFLICTS_KEY)) {
